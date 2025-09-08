@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/components/ui/use-toast";
+import { apiService } from "@/services/api";
 import { Upload, FileSpreadsheet, Shield, Zap, Activity } from "lucide-react";
 
 export default function Index() {
@@ -46,45 +47,44 @@ export default function Index() {
     setIsUploading(true);
     setUploadProgress(0);
 
-    // Simulate upload progress
-    const progressInterval = setInterval(() => {
-      setUploadProgress(prev => {
-        if (prev >= 90) {
-          clearInterval(progressInterval);
-          return prev;
-        }
-        return prev + Math.random() * 10;
-      });
-    }, 200);
-
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Simulate upload progress
+      const progressInterval = setInterval(() => {
+        setUploadProgress(prev => {
+          if (prev >= 90) {
+            clearInterval(progressInterval);
+            return prev;
+          }
+          return prev + Math.random() * 10;
+        });
+      }, 200);
+
+      // Call the real API
+      const result = await apiService.uploadFile(file);
       
+      clearInterval(progressInterval);
       setUploadProgress(100);
       
-      toast({
-        title: "Analysis Started",
-        description: "Your file has been uploaded and analysis is in progress.",
-      });
-      
-      // Redirect to reports page after successful upload
       setTimeout(() => {
+        setIsUploading(false);
+        setUploadProgress(0);
+        toast({
+          title: "Analysis Started",
+          description: `${result.message} - Job ID: ${result.job_id}`,
+        });
+        
+        // Redirect to reports page
         navigate('/reports');
       }, 1000);
       
     } catch (error) {
+      setIsUploading(false);
+      setUploadProgress(0);
       toast({
-        title: "Upload failed",
-        description: "There was an error processing your file.",
+        title: "Upload Failed",
+        description: error instanceof Error ? error.message : "Unknown error occurred",
         variant: "destructive",
       });
-    } finally {
-      clearInterval(progressInterval);
-      setTimeout(() => {
-        setIsUploading(false);
-        setUploadProgress(0);
-      }, 1500);
     }
   };
 

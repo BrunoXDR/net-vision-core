@@ -3,6 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DataTable } from "@/components/DataTable";
+import { useToast } from "@/hooks/use-toast";
+import { apiService } from "@/services/api";
 import { FolderOpen, FileText, Trash2 } from "lucide-react";
 
 interface Job {
@@ -17,62 +19,111 @@ interface ReportFile {
 }
 
 export default function Reports() {
+  const { toast } = useToast();
   const [jobs, setJobs] = useState<Job[]>([]);
   const [selectedJob, setSelectedJob] = useState<string | null>(null);
   const [reportFiles, setReportFiles] = useState<ReportFile[]>([]);
   const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
   const [tableData, setTableData] = useState<any[]>([]);
   const [selectedReport, setSelectedReport] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  // Mock data for demonstration
+  // Load jobs on component mount
   useEffect(() => {
-    const mockJobs = [
-      { id: "Report_07-09-2025-22-10-15", created: "2025-09-07 22:10:15" },
-      { id: "Report_06-09-2025-15-30-45", created: "2025-09-06 15:30:45" },
-      { id: "Report_05-09-2025-09-20-12", created: "2025-09-05 09:20:12" },
-    ];
-    setJobs(mockJobs);
+    loadJobs();
   }, []);
 
-  const handleJobSelect = (jobId: string) => {
+  const loadJobs = async () => {
+    try {
+      const jobIds = await apiService.getJobs();
+      const jobsWithDates = jobIds.map(id => ({
+        id,
+        created: id.replace('Report_', '').replace(/-/g, '/').replace(/-/g, ':')
+      }));
+      setJobs(jobsWithDates);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to load jobs",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleJobSelect = async (jobId: string) => {
     setSelectedJob(jobId);
     setSelectedReport(null);
     setTableData([]);
-    
-    // Mock report files
-    const mockFiles = [
-      { name: "E1_top_regras.csv", size: "2.4 MB", modified: "2025-09-07 22:11:30" },
-      { name: "F1_top_destinos.csv", size: "1.8 MB", modified: "2025-09-07 22:11:45" },
-      { name: "G1_top_aplicacoes.csv", size: "3.2 MB", modified: "2025-09-07 22:12:00" },
-      { name: "ED2_distribuicao_regras.csv", size: "1.5 MB", modified: "2025-09-07 22:12:15" },
-    ];
-    setReportFiles(mockFiles);
     setSelectedFiles([]);
+    setLoading(true);
+    
+    try {
+      const reports = await apiService.getJobReports(jobId);
+      const reportsWithMetadata = reports.map(name => ({
+        name,
+        size: "Unknown", // API doesn't provide size info
+        modified: "Unknown" // API doesn't provide modification time
+      }));
+      setReportFiles(reportsWithMetadata);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to load reports for this job",
+        variant: "destructive",
+      });
+      setReportFiles([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleFileSelect = (fileName: string) => {
+  const handleFileSelect = async (fileName: string) => {
+    if (!selectedJob) return;
+    
     setSelectedReport(fileName);
+    setLoading(true);
     
-    // Mock table data
-    const mockData = [
-      { id: 1, rule: "ALLOW_HTTP", count: 15420, percentage: "45.2%" },
-      { id: 2, rule: "BLOCK_MALWARE", count: 8730, percentage: "25.6%" },
-      { id: 3, rule: "ALLOW_HTTPS", count: 6890, percentage: "20.2%" },
-      { id: 4, rule: "MONITOR_DNS", count: 3080, percentage: "9.0%" },
-    ];
-    setTableData(mockData);
+    try {
+      const data = await apiService.getReportData(selectedJob, fileName);
+      setTableData(data);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to load report data",
+        variant: "destructive",
+      });
+      setTableData([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleDeleteSelected = () => {
-    if (selectedFiles.length === 0) return;
+  const handleDeleteSelected = async () => {
+    if (selectedFiles.length === 0 || !selectedJob) return;
     
-    // Remove selected files from the list
-    setReportFiles(prev => prev.filter(file => !selectedFiles.includes(file.name)));
-    setSelectedFiles([]);
-    
-    if (selectedReport && selectedFiles.includes(selectedReport)) {
-      setSelectedReport(null);
-      setTableData([]);
+    try {
+      const result = await apiService.deleteReports(selectedJob, selectedFiles);
+      
+      // Remove deleted files from the list
+      setReportFiles(prev => prev.filter(file => !selectedFiles.includes(file.name)));
+      setSelectedFiles([]);
+      
+      // Clear table data if current report was deleted
+      if (selectedReport && selectedFiles.includes(selectedReport)) {
+        setSelectedReport(null);
+        setTableData([]);
+      }
+      
+      toast({
+        title: "Success",
+        description: result.message,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete selected files",
+        variant: "destructive",
+      });
     }
   };
 
