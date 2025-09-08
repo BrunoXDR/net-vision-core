@@ -2,41 +2,56 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
+/* Cyber Security Theme Design System - All colors in HSL */
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* Cyber Dark Theme */
+    --background: 211 100% 6%;           /* Deep navy #0a192f */
+    --foreground: 193 100% 85%;          /* Light cyan text */
 
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card: 211 100% 8%;                 /* Slightly lighter navy */
+    --card-foreground: 193 100% 85%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover: 211 100% 8%;
+    --popover-foreground: 193 100% 85%;
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    --primary: 193 100% 50%;             /* Electric cyan #00d9ff */
+    --primary-foreground: 211 100% 6%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 88 100% 55%;            /* Neon green #39ff14 */
+    --secondary-foreground: 211 100% 6%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted: 211 50% 15%;                /* Darker muted */
+    --muted-foreground: 193 50% 65%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --accent: 348 100% 61%;              /* Hot pink #ff1744 */
+    --accent-foreground: 211 100% 6%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 348 100% 61%;         /* Hot pink for danger */
+    --destructive-foreground: 193 100% 95%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    --border: 193 100% 25%;              /* Cyan border */
+    --input: 211 50% 12%;                /* Dark input background */
+    --ring: 193 100% 50%;                /* Cyan focus ring */
 
-    --radius: 0.5rem;
+    --radius: 0.75rem;
+
+    /* Custom cyber colors */
+    --cyber-glow: 193 100% 50%;          /* Electric cyan glow */
+    --terminal-green: 88 100% 55%;       /* Matrix green */
+    --warning-orange: 39 100% 50%;       /* Alert orange */
+    --grid-lines: 193 100% 15%;          /* Subtle grid */
+    
+    /* Gradients */
+    --gradient-cyber: linear-gradient(135deg, hsl(193 100% 50%), hsl(88 100% 55%));
+    --gradient-glow: radial-gradient(circle, hsl(193 100% 50% / 0.3), transparent);
+    --gradient-surface: linear-gradient(145deg, hsl(211 100% 8%), hsl(211 100% 12%));
+    
+    /* Shadows and effects */
+    --shadow-cyber: 0 0 20px hsl(193 100% 50% / 0.3);
+    --shadow-glow: 0 0 40px hsl(193 100% 50% / 0.2);
+    --shadow-deep: 0 10px 30px -10px hsl(211 100% 3% / 0.8);
 
     --sidebar-background: 0 0% 98%;
 
@@ -100,6 +115,86 @@ All colors MUST be HSL.
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-mono overflow-x-hidden;
+  }
+  
+  /* Cyber animations and effects */
+  @keyframes matrix-rain {
+    0% { transform: translateY(-100vh); opacity: 1; }
+    100% { transform: translateY(100vh); opacity: 0; }
+  }
+  
+  @keyframes glow-pulse {
+    0%, 100% { box-shadow: 0 0 5px hsl(var(--cyber-glow)), 0 0 10px hsl(var(--cyber-glow)), 0 0 15px hsl(var(--cyber-glow)); }
+    50% { box-shadow: 0 0 10px hsl(var(--cyber-glow)), 0 0 20px hsl(var(--cyber-glow)), 0 0 30px hsl(var(--cyber-glow)); }
+  }
+  
+  @keyframes scan-line {
+    0% { transform: translateY(-100%); }
+    100% { transform: translateY(100vh); }
+  }
+  
+  @keyframes fade-in-up {
+    from {
+      opacity: 0;
+      transform: translateY(30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  .animate-matrix-rain {
+    animation: matrix-rain 3s linear infinite;
+  }
+  
+  .animate-glow-pulse {
+    animation: glow-pulse 2s ease-in-out infinite;
+  }
+  
+  .animate-scan-line {
+    animation: scan-line 2s linear infinite;
+  }
+  
+  .animate-fade-in-up {
+    animation: fade-in-up 0.6s ease-out;
+  }
+  
+  /* Cyber grid background */
+  .cyber-grid {
+    background-image: 
+      linear-gradient(hsl(var(--grid-lines)) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(var(--grid-lines)) 1px, transparent 1px);
+    background-size: 50px 50px;
+  }
+  
+  /* Glowing elements */
+  .cyber-glow {
+    box-shadow: 0 0 10px hsl(var(--cyber-glow) / 0.5);
+    border: 1px solid hsl(var(--cyber-glow) / 0.3);
+  }
+  
+  .cyber-glow:hover {
+    box-shadow: 0 0 20px hsl(var(--cyber-glow) / 0.8);
+    border-color: hsl(var(--cyber-glow));
+  }
+  
+  /* Terminal-style scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    background: hsl(var(--background));
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--cyber-glow) / 0.5);
+    border-radius: 4px;
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--cyber-glow));
   }
 }
