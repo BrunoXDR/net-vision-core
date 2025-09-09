@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://localhost:5000';
+const API_BASE_URL = 'http://localhost:5000/api/v1';
 
 export interface UploadResponse {
   message: string;
@@ -10,10 +10,9 @@ export interface Job {
   created: string;
 }
 
-export interface ReportFile {
+export interface Report {
+  id: string;
   name: string;
-  size: string;
-  modified: string;
 }
 
 class ApiService {
@@ -21,7 +20,7 @@ class ApiService {
     const formData = new FormData();
     formData.append('file', file);
 
-    const response = await fetch(`${API_BASE_URL}/upload`, {
+    const response = await fetch(`http://localhost:5000/upload`, {
       method: 'POST',
       body: formData,
     });
@@ -44,37 +43,21 @@ class ApiService {
     return response.json();
   }
 
-  async getJobReports(jobId: string): Promise<string[]> {
-    const response = await fetch(`${API_BASE_URL}/jobs/${jobId}`);
+  async getAvailableReports(jobId: string): Promise<Report[]> {
+    const response = await fetch(`${API_BASE_URL}/jobs/${jobId}/reports`);
     
     if (!response.ok) {
-      throw new Error('Failed to fetch job reports');
+      throw new Error('Failed to fetch available reports');
     }
 
     return response.json();
   }
 
-  async getReportData(jobId: string, reportName: string): Promise<any[]> {
-    const response = await fetch(`${API_BASE_URL}/jobs/${jobId}/reports/${reportName}`);
+  async getReportData(jobId: string, reportId: string): Promise<any[]> {
+    const response = await fetch(`${API_BASE_URL}/jobs/${jobId}/reports/${reportId}`);
     
     if (!response.ok) {
       throw new Error('Failed to fetch report data');
-    }
-
-    return response.json();
-  }
-
-  async deleteReports(jobId: string, files: string[]): Promise<{ message: string }> {
-    const response = await fetch(`${API_BASE_URL}/jobs/${jobId}/reports`, {
-      method: 'DELETE',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ files }),
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to delete reports');
     }
 
     return response.json();

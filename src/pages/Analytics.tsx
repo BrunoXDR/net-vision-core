@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Activity } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { apiService } from "@/services/api";
+import { apiService, Report } from "@/services/api";
 import ChartCard from "@/components/ChartCard";
 
 interface ChartData {
@@ -42,38 +42,24 @@ export default function Analytics() {
     const newChartData: Record<string, ChartData[]> = {};
 
     try {
-      // Get all reports for this job
-      const reports = await apiService.getJobReports(jobId);
+      // Get all available reports for this job
+      const reports = await apiService.getAvailableReports(jobId);
       
-      // Map report names to chart data keys
-      const reportMapping: Record<string, string> = {
-        'top_regras.csv': 'top_regras',
-        'top_regras_por_app.csv': 'top_regras_por_app',
-        'top_regras_por_porta.csv': 'top_regras_por_porta',
-        'top_regras_por_origem.csv': 'top_regras_por_origem',
-        'top_regras_por_protocolo.csv': 'top_regras_por_protocolo',
-        'top_regras_por_dominio.csv': 'top_regras_por_dominio',
-        'top_protocolos.csv': 'top_protocolos',
-        'top_protocolos_por_app.csv': 'top_protocolos_por_app',
-        'top_protocolos_por_porta.csv': 'top_protocolos_por_porta',
-        'top_protocolos_por_origem.csv': 'top_protocolos_por_origem',
-        'top_protocolos_por_dominio.csv': 'top_protocolos_por_dominio',
-      };
+      // Map report IDs to chart data keys
+      const chartReportIds = [
+        'E1', 'E2', 'E3', 'E4', 'E5', 'E6', // Rules charts
+        'F1', 'F2', 'F3', 'F4', 'F5'       // Protocols charts  
+      ];
 
-      // Load data for each matching report
+      // Load data for each chart report
       for (const report of reports) {
-        const chartKey = reportMapping[report];
-        if (chartKey) {
+        if (chartReportIds.includes(report.id)) {
           try {
-            const data = await apiService.getReportData(jobId, report);
-            // Transform data to match ChartData interface
-            newChartData[chartKey] = data.map(item => ({
-              name: Object.values(item)[0] as string, // First column as name
-              value: Object.values(item)[1] as number, // Second column as value
-              category: Object.values(item)[2] as string || undefined // Third column as category if exists
-            }));
+            const data = await apiService.getReportData(jobId, report.id);
+            // Data comes pre-formatted from the API
+            newChartData[report.id] = data;
           } catch (error) {
-            console.warn(`Failed to load data for ${report}:`, error);
+            console.warn(`Failed to load data for ${report.name}:`, error);
           }
         }
       }
@@ -138,88 +124,88 @@ export default function Analytics() {
 
         {selectedJob && !loading && (
           <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-            {chartData.top_regras && (
+            {chartData.E1 && (
               <ChartCard
-                title="Top Regras"
-                data={chartData.top_regras}
+                title="Top Firewall Rules"
+                data={chartData.E1}
                 animationDelay="0.3s"
               />
             )}
-            {chartData.top_regras_por_app && (
+            {chartData.E2 && (
               <ChartCard
-                title="Top Regras por App"
-                data={chartData.top_regras_por_app}
+                title="Rules by Application"
+                data={chartData.E2}
                 filterKey="category"
                 animationDelay="0.4s"
               />
             )}
-            {chartData.top_regras_por_porta && (
+            {chartData.E3 && (
               <ChartCard
-                title="Top Regras por Porta"
-                data={chartData.top_regras_por_porta}
+                title="Rules by Port"
+                data={chartData.E3}
                 filterKey="category"
                 animationDelay="0.5s"
               />
             )}
-            {chartData.top_regras_por_origem && (
+            {chartData.E4 && (
               <ChartCard
-                title="Top Regras por Origem"
-                data={chartData.top_regras_por_origem}
+                title="Rules by Source"
+                data={chartData.E4}
                 filterKey="category"
                 animationDelay="0.6s"
               />
             )}
-            {chartData.top_regras_por_protocolo && (
+            {chartData.E5 && (
               <ChartCard
-                title="Top Regras por Protocolo"
-                data={chartData.top_regras_por_protocolo}
+                title="Rules by Protocol"
+                data={chartData.E5}
                 filterKey="category"
                 animationDelay="0.7s"
               />
             )}
-            {chartData.top_regras_por_dominio && (
+            {chartData.E6 && (
               <ChartCard
-                title="Top Regras por Domínio"
-                data={chartData.top_regras_por_dominio}
+                title="Rules by Domain"
+                data={chartData.E6}
                 filterKey="category"
                 animationDelay="0.8s"
               />
             )}
-            {chartData.top_protocolos && (
+            {chartData.F1 && (
               <ChartCard
-                title="Top Protocolos"
-                data={chartData.top_protocolos}
+                title="Top Protocols"
+                data={chartData.F1}
                 animationDelay="0.9s"
               />
             )}
-            {chartData.top_protocolos_por_app && (
+            {chartData.F2 && (
               <ChartCard
-                title="Top Protocolos por App"
-                data={chartData.top_protocolos_por_app}
+                title="Protocols by Application"
+                data={chartData.F2}
                 filterKey="category"
                 animationDelay="1.0s"
               />
             )}
-            {chartData.top_protocolos_por_porta && (
+            {chartData.F3 && (
               <ChartCard
-                title="Top Protocolos por Porta"
-                data={chartData.top_protocolos_por_porta}
+                title="Protocols by Port"
+                data={chartData.F3}
                 filterKey="category"
                 animationDelay="1.1s"
               />
             )}
-            {chartData.top_protocolos_por_origem && (
+            {chartData.F4 && (
               <ChartCard
-                title="Top Protocolos por Origem"
-                data={chartData.top_protocolos_por_origem}
+                title="Protocols by Source"
+                data={chartData.F4}
                 filterKey="category"
                 animationDelay="1.2s"
               />
             )}
-            {chartData.top_protocolos_por_dominio && (
+            {chartData.F5 && (
               <ChartCard
-                title="Top Protocolos por Domínio"
-                data={chartData.top_protocolos_por_dominio}
+                title="Protocols by Domain"
+                data={chartData.F5}
                 filterKey="category"
                 animationDelay="1.3s"
               />
