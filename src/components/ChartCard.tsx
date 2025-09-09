@@ -2,8 +2,9 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-import { BarChart3, Filter } from "lucide-react";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 
 interface ChartData {
   name: string;
@@ -13,132 +14,170 @@ interface ChartData {
 
 interface ChartCardProps {
   title: string;
-  data: ChartData[];
-  filterKey?: string;
+  data: any[];
+  categoryKey?: string;
   animationDelay?: string;
 }
 
-export default function ChartCard({ title, data, filterKey, animationDelay = "0s" }: ChartCardProps) {
-  const [selectedItems, setSelectedItems] = useState<string[]>(
-    data.map(item => item.name)
-  );
-  const [categoryFilter, setCategoryFilter] = useState<string>("all");
+export default function ChartCard({ title, data, categoryKey, animationDelay = "0s" }: ChartCardProps) {
+  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
 
-  const categories = filterKey ? 
-    [...new Set(data.map(item => item.category).filter(Boolean))] : [];
+  // Determine the value key and name key from the data structure
+  const getDataKeys = () => {
+    if (data.length === 0) return { nameKey: '', valueKey: '' };
+    
+    const firstItem = data[0];
+    const keys = Object.keys(firstItem);
+    
+    // Find value key (usually 'Count' or numeric field)
+    const valueKey = keys.find(key => typeof firstItem[key] === 'number') || keys[keys.length - 1];
+    
+    // Find name key (usually not the category key and not the value key)
+    const nameKey = keys.find(key => key !== categoryKey && key !== valueKey) || keys[0];
+    
+    return { nameKey, valueKey };
+  };
 
-  const filteredData = data.filter(item => {
-    const isSelected = selectedItems.includes(item.name);
-    const categoryMatch = categoryFilter === "all" || item.category === categoryFilter;
-    return isSelected && categoryMatch;
-  });
+  const { nameKey, valueKey } = getDataKeys();
+
+  // Get unique categories if categoryKey is provided
+  const categories = categoryKey 
+    ? Array.from(new Set(data.map(item => item[categoryKey])))
+    : [];
+
+  // Filter data based on category selection
+  const categoryFilteredData = selectedCategory === "all" 
+    ? data 
+    : data.filter(item => item[categoryKey] === selectedCategory);
+
+  // Further filter by selected items (if any are selected, show only those)
+  const filteredData = selectedItems.size > 0 
+    ? categoryFilteredData.filter(item => selectedItems.has(item[nameKey]))
+    : categoryFilteredData;
 
   const handleItemToggle = (itemName: string) => {
-    setSelectedItems(prev => 
-      prev.includes(itemName) 
-        ? prev.filter(name => name !== itemName)
-        : [...prev, itemName]
-    );
+    const newSelected = new Set(selectedItems);
+    if (newSelected.has(itemName)) {
+      newSelected.delete(itemName);
+    } else {
+      newSelected.add(itemName);
+    }
+    setSelectedItems(newSelected);
   };
 
   const handleSelectAll = () => {
-    setSelectedItems(data.map(item => item.name));
-  };
-
-  const handleDeselectAll = () => {
-    setSelectedItems([]);
+    if (selectedItems.size === categoryFilteredData.length) {
+      setSelectedItems(new Set());
+    } else {
+      setSelectedItems(new Set(categoryFilteredData.map(item => item[nameKey])));
+    }
   };
 
   return (
-    <Card className="cyber-glow animate-fade-in-up" style={{ animationDelay }}>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-cyber-glow">
-          <BarChart3 className="h-5 w-5" />
-          {title}
-        </CardTitle>
-        
-        <div className="flex flex-col gap-4 mt-4">
-          {/* Category Filter */}
-          {categories.length > 0 && (
-            <div className="flex items-center gap-2">
-              <Filter className="h-4 w-4 text-muted-foreground" />
-              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                <SelectTrigger className="w-48">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todas as categorias</SelectItem>
-                  {categories.map(category => (
-                    <SelectItem key={category} value={category!}>
-                      {category}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-
-          {/* Item Selection Controls */}
-          <div className="flex gap-2">
-            <button
-              onClick={handleSelectAll}
-              className="text-xs px-2 py-1 rounded bg-cyber-glow/20 text-cyber-glow hover:bg-cyber-glow/30 transition-colors"
-            >
-              Selecionar Todos
-            </button>
-            <button
-              onClick={handleDeselectAll}
-              className="text-xs px-2 py-1 rounded bg-destructive/20 text-destructive hover:bg-destructive/30 transition-colors"
-            >
-              Remover Todos
-            </button>
-          </div>
-
-          {/* Item Checkboxes */}
-          <div className="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto">
-            {data.map(item => (
-              <div key={item.name} className="flex items-center space-x-2">
-                <Checkbox
-                  id={`${title}-${item.name}`}
-                  checked={selectedItems.includes(item.name)}
-                  onCheckedChange={() => handleItemToggle(item.name)}
-                />
-                <label
-                  htmlFor={`${title}-${item.name}`}
-                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                >
-                  {item.name}
-                </label>
+    <div className="w-full">
+      <Card className="border-0 shadow-none bg-transparent">
+        <CardHeader className="px-0 pb-4">
+          <div className="flex flex-col gap-4">
+            {/* Category Filter */}
+            {categoryKey && categories.length > 0 && (
+              <div className="flex items-center gap-2">
+                <Label htmlFor="category-filter" className="text-sm font-medium">
+                  Filter by {categoryKey}:
+                </Label>
+                <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                  <SelectTrigger className="w-[200px]" id="category-filter">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All {categoryKey}s</SelectItem>
+                    {categories.map((category) => (
+                      <SelectItem key={category} value={category}>
+                        {category}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-            ))}
+            )}
+
+            {/* Item Selection Controls */}
+            <div className="flex items-center gap-4">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleSelectAll}
+                className="text-xs"
+              >
+                {selectedItems.size === categoryFilteredData.length ? "Deselect All" : "Select All"}
+              </Button>
+              {selectedItems.size > 0 && (
+                <span className="text-xs text-muted-foreground">
+                  {selectedItems.size} of {categoryFilteredData.length} items selected
+                </span>
+              )}
+            </div>
           </div>
-        </div>
-      </CardHeader>
-      
-      <CardContent>
-        <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={filteredData}>
-            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--grid-lines))" />
-            <XAxis 
-              dataKey="name" 
-              tick={{ fill: 'hsl(var(--foreground))', fontSize: 12 }}
-              angle={-45}
-              textAnchor="end"
-              height={80}
-            />
-            <YAxis tick={{ fill: 'hsl(var(--foreground))' }} />
-            <Tooltip 
-              contentStyle={{
-                backgroundColor: 'hsl(var(--card))',
-                border: '1px solid hsl(var(--cyber-glow))',
-                borderRadius: '8px',
-                color: 'hsl(var(--foreground))'
-              }}
-            />
-            <Bar dataKey="value" fill="hsl(var(--cyber-glow))" />
-          </BarChart>
-        </ResponsiveContainer>
-      </CardContent>
-    </Card>
+        </CardHeader>
+        <CardContent className="px-0">
+          <div className="flex gap-6">
+            {/* Chart */}
+            <div className="flex-1">
+              <ResponsiveContainer width="100%" height={400}>
+                <BarChart data={filteredData}>
+                  <XAxis 
+                    dataKey={nameKey} 
+                    fontSize={12}
+                    tickLine={false}
+                    axisLine={false}
+                  />
+                  <YAxis
+                    fontSize={12}
+                    tickLine={false}
+                    axisLine={false}
+                    tickFormatter={(value) => `${value}`}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: 'hsl(var(--background))',
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: '6px',
+                    }}
+                  />
+                  <Bar 
+                    dataKey={valueKey} 
+                    fill="hsl(var(--primary))"
+                    radius={[4, 4, 0, 0]}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+
+            {/* Item Selection Panel */}
+            <div className="w-48 max-h-[400px] overflow-y-auto border-l pl-4">
+              <h4 className="text-sm font-medium mb-2">Items</h4>
+              <div className="space-y-2">
+                {categoryFilteredData.map((item, index) => (
+                  <div key={`${item[nameKey]}-${index}`} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`${item[nameKey]}-${index}`}
+                      checked={selectedItems.size === 0 || selectedItems.has(item[nameKey])}
+                      onCheckedChange={() => handleItemToggle(item[nameKey])}
+                    />
+                    <Label
+                      htmlFor={`${item[nameKey]}-${index}`}
+                      className="text-xs cursor-pointer truncate"
+                      title={item[nameKey]}
+                    >
+                      {item[nameKey]}
+                    </Label>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   );
 }

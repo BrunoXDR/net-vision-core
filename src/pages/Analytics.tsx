@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Activity } from "lucide-react";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Activity, BarChart3 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { apiService, Report } from "@/services/api";
+import { apiService } from "@/services/api";
 import ChartCard from "@/components/ChartCard";
 
 interface ChartData {
@@ -12,11 +13,34 @@ interface ChartData {
   category?: string;
 }
 
+interface ChartConfig {
+  id: string;
+  title: string;
+  description: string;
+  hasCategory: boolean;
+  categoryKey?: string;
+}
+
+// Configuration for Top 10 charts
+const CHART_CONFIGS: ChartConfig[] = [
+  { id: "T10_E1", title: "Top 10 Firewall Rules", description: "Most frequently used firewall rules", hasCategory: false },
+  { id: "T10_E2", title: "Top 10 Rules by Application", description: "Most used rules grouped by application", hasCategory: true, categoryKey: "Application" },
+  { id: "T10_E3", title: "Top 10 Rules by Port", description: "Most used rules grouped by port", hasCategory: true, categoryKey: "Port" },
+  { id: "T10_E4", title: "Top 10 Rules by Source", description: "Most used rules grouped by source", hasCategory: true, categoryKey: "Source" },
+  { id: "T10_E5", title: "Top 10 Rules by Protocol", description: "Most used rules grouped by protocol", hasCategory: true, categoryKey: "Protocol" },
+  { id: "T10_E6", title: "Top 10 Rules by Domain", description: "Most used rules grouped by domain", hasCategory: true, categoryKey: "Domain" },
+  { id: "T10_F1", title: "Top 10 Protocols", description: "Most frequently used network protocols", hasCategory: false },
+  { id: "T10_F2", title: "Top 10 Protocols by Application", description: "Most used protocols grouped by application", hasCategory: true, categoryKey: "Application" },
+  { id: "T10_F3", title: "Top 10 Protocols by Port", description: "Most used protocols grouped by port", hasCategory: true, categoryKey: "Port" },
+  { id: "T10_F4", title: "Top 10 Protocols by Source", description: "Most used protocols grouped by source", hasCategory: true, categoryKey: "Source" },
+  { id: "T10_F5", title: "Top 10 Protocols by Domain", description: "Most used protocols grouped by domain", hasCategory: true, categoryKey: "Domain" }
+];
+
 export default function Analytics() {
   const { toast } = useToast();
   const [selectedJob, setSelectedJob] = useState<string>("");
   const [jobs, setJobs] = useState<string[]>([]);
-  const [chartData, setChartData] = useState<Record<string, ChartData[]>>({});
+  const [chartData, setChartData] = useState<Record<string, any[]>>({});
   const [loading, setLoading] = useState(false);
 
   // Load jobs on component mount
@@ -39,28 +63,17 @@ export default function Analytics() {
 
   const loadChartData = async (jobId: string) => {
     setLoading(true);
-    const newChartData: Record<string, ChartData[]> = {};
+    const newChartData: Record<string, any[]> = {};
 
     try {
-      // Get all available reports for this job
-      const reports = await apiService.getAvailableReports(jobId);
-      
-      // Map report IDs to chart data keys
-      const chartReportIds = [
-        'E1', 'E2', 'E3', 'E4', 'E5', 'E6', // Rules charts
-        'F1', 'F2', 'F3', 'F4', 'F5'       // Protocols charts  
-      ];
-
-      // Load data for each chart report
-      for (const report of reports) {
-        if (chartReportIds.includes(report.id)) {
-          try {
-            const data = await apiService.getReportData(jobId, report.id);
-            // Data comes pre-formatted from the API
-            newChartData[report.id] = data;
-          } catch (error) {
-            console.warn(`Failed to load data for ${report.name}:`, error);
-          }
+      // Load data for each configured chart
+      for (const config of CHART_CONFIGS) {
+        try {
+          const data = await apiService.getReportData(jobId, config.id);
+          // Data comes clean from the API, ready for charts
+          newChartData[config.id] = data;
+        } catch (error) {
+          console.warn(`Failed to load data for ${config.title}:`, error);
         }
       }
 
@@ -123,94 +136,33 @@ export default function Analytics() {
         </Card>
 
         {selectedJob && !loading && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-            {chartData.E1 && (
-              <ChartCard
-                title="Top Firewall Rules"
-                data={chartData.E1}
-                animationDelay="0.3s"
-              />
-            )}
-            {chartData.E2 && (
-              <ChartCard
-                title="Rules by Application"
-                data={chartData.E2}
-                filterKey="category"
-                animationDelay="0.4s"
-              />
-            )}
-            {chartData.E3 && (
-              <ChartCard
-                title="Rules by Port"
-                data={chartData.E3}
-                filterKey="category"
-                animationDelay="0.5s"
-              />
-            )}
-            {chartData.E4 && (
-              <ChartCard
-                title="Rules by Source"
-                data={chartData.E4}
-                filterKey="category"
-                animationDelay="0.6s"
-              />
-            )}
-            {chartData.E5 && (
-              <ChartCard
-                title="Rules by Protocol"
-                data={chartData.E5}
-                filterKey="category"
-                animationDelay="0.7s"
-              />
-            )}
-            {chartData.E6 && (
-              <ChartCard
-                title="Rules by Domain"
-                data={chartData.E6}
-                filterKey="category"
-                animationDelay="0.8s"
-              />
-            )}
-            {chartData.F1 && (
-              <ChartCard
-                title="Top Protocols"
-                data={chartData.F1}
-                animationDelay="0.9s"
-              />
-            )}
-            {chartData.F2 && (
-              <ChartCard
-                title="Protocols by Application"
-                data={chartData.F2}
-                filterKey="category"
-                animationDelay="1.0s"
-              />
-            )}
-            {chartData.F3 && (
-              <ChartCard
-                title="Protocols by Port"
-                data={chartData.F3}
-                filterKey="category"
-                animationDelay="1.1s"
-              />
-            )}
-            {chartData.F4 && (
-              <ChartCard
-                title="Protocols by Source"
-                data={chartData.F4}
-                filterKey="category"
-                animationDelay="1.2s"
-              />
-            )}
-            {chartData.F5 && (
-              <ChartCard
-                title="Protocols by Domain"
-                data={chartData.F5}
-                filterKey="category"
-                animationDelay="1.3s"
-              />
-            )}
-          </div>
+          <Accordion type="multiple" className="space-y-4 animate-fade-in-up" style={{ animationDelay: "0.3s" }}>
+            {CHART_CONFIGS.map((config, index) => (
+              chartData[config.id] && (
+                <AccordionItem key={config.id} value={config.id} className="cyber-glow">
+                  <AccordionTrigger className="hover:no-underline">
+                    <div className="flex items-center gap-3 text-left">
+                      <BarChart3 className="h-5 w-5 text-cyber-glow" />
+                      <div>
+                        <h3 className="text-lg font-semibold text-cyber-glow">{config.title}</h3>
+                        <p className="text-sm text-muted-foreground">{config.description}</p>
+                      </div>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="pt-6">
+                    <div className="w-full">
+                      <ChartCard
+                        title={config.title}
+                        data={chartData[config.id]}
+                        categoryKey={config.categoryKey}
+                        animationDelay={`${0.3 + index * 0.1}s`}
+                      />
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              )
+            ))}
+          </Accordion>
         )}
 
         {loading && (
